@@ -25,10 +25,37 @@ function detectLanguage(text) {
 // Função para processar uma pergunta
 function processQuestion(question) {
     const language = detectLanguage(question);
-    const summaries = articles.map(article => summarizeContent(article.content, language));
-    const response = summaries.find(summary => summary.includes(question.toLowerCase())) || 
+    const keywords = extractKeywords(question, language);  // Extrair palavras-chave da pergunta
+    const bestMatch = findBestMatch(keywords);  // Encontrar o artigo mais relevante
+
+    const response = bestMatch ? bestMatch : 
         (language === 'pt' ? "Desculpe, não encontrei nada relacionado." : "Sorry, I couldn't find anything related.");
+    
     return response;
+}
+
+// Função para extrair palavras-chave simples
+function extractKeywords(question, language) {
+    const stopWords = language === 'pt' ? ["e", "de", "que", "a", "o", "na", "em", "com"] : ["and", "the", "that", "a", "in", "of"];
+    return question
+        .toLowerCase()
+        .split(" ")
+        .filter(word => !stopWords.includes(word))
+        .join(" ");
+}
+
+// Função para encontrar o artigo mais relevante
+function findBestMatch(keywords) {
+    const matchedArticles = articles.filter(article => {
+        return article.content.toLowerCase().includes(keywords);
+    });
+
+    if (matchedArticles.length > 0) {
+        // Retorna um resumo do primeiro artigo que coincidir
+        return summarizeContent(matchedArticles[0].content, detectLanguage(keywords));
+    } else {
+        return null;
+    }
 }
 
 // Função para resumir conteúdo
@@ -67,4 +94,3 @@ function sendMessage() {
 
 // Carregar artigos ao iniciar
 loadArticles();
-      
