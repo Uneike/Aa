@@ -59,7 +59,7 @@ function processQuestion(question) {
 
 // Função para extrair palavras-chave simples (removendo palavras comuns)
 function extractKeywords(question, language) {
-    const stopWords = language === 'pt' ? ["e", "de", "que", "a", "o", "na", "em", "com", "como"] : ["and", "the", "that", "a", "in", "of", "with"];
+    const stopWords = language === 'pt' ? ["e", "de", "que", "a", "o", "na", "em", "com", "como", "oi"] : ["and", "the", "that", "a", "in", "of", "with", "hi"];
     return question
         .toLowerCase()
         .split(" ")
