@@ -34,24 +34,41 @@ function processQuestion(question) {
     return response;
 }
 
-// Função para extrair palavras-chave simples
+// Função para extrair palavras-chave simples (removendo palavras comuns)
 function extractKeywords(question, language) {
-    const stopWords = language === 'pt' ? ["e", "de", "que", "a", "o", "na", "em", "com"] : ["and", "the", "that", "a", "in", "of"];
+    const stopWords = language === 'pt' ? ["e", "de", "que", "a", "o", "na", "em", "com", "como"] : ["and", "the", "that", "a", "in", "of", "with"];
     return question
         .toLowerCase()
         .split(" ")
         .filter(word => !stopWords.includes(word))
+        .map(word => word.trim())
         .join(" ");
 }
 
 // Função para encontrar o artigo mais relevante
 function findBestMatch(keywords) {
-    const matchedArticles = articles.filter(article => {
-        return article.content.toLowerCase().includes(keywords);
+    let matchedArticles = [];
+
+    // Para cada artigo, procuramos por palavras-chave
+    articles.forEach(article => {
+        const articleContent = article.content.toLowerCase();
+        const keywordArray = keywords.split(" ");
+
+        // Verifica se o conteúdo do artigo contém qualquer palavra-chave
+        const matches = keywordArray.filter(keyword => articleContent.includes(keyword));
+
+        if (matches.length > 0) {
+            matchedArticles.push({
+                content: article.content,
+                matchCount: matches.length
+            });
+        }
     });
 
+    // Ordena os artigos pela quantidade de palavras-chave que coincidem
+    matchedArticles.sort((a, b) => b.matchCount - a.matchCount);
+
     if (matchedArticles.length > 0) {
-        // Retorna um resumo do primeiro artigo que coincidir
         return summarizeContent(matchedArticles[0].content, detectLanguage(keywords));
     } else {
         return null;
@@ -60,7 +77,6 @@ function findBestMatch(keywords) {
 
 // Função para resumir conteúdo
 function summarizeContent(content, language) {
-    // Simplesmente retorna as primeiras 3 linhas como resumo (pode ser melhorado)
     const lines = content.split('\n').filter(line => line.trim().length > 0);
     return language === 'pt' 
         ? lines.slice(0, 3).join(' ') 
