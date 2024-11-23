@@ -21,7 +21,31 @@
         <button onclick="sendMessage()">Send</button>
     </div>
     <script>
-        // Função para buscar informações da internet usando a Wikipedia API
+        // Armazena os arquivos de markdown
+const posts = [
+    'posts/example1.md',
+    'posts/exemplo2.md'
+];
+
+// Dados processados dos artigos
+let articles = [];
+
+// Função para carregar e converter os arquivos Markdown
+async function loadArticles() {
+    for (let post of posts) {
+        const response = await fetch(post);
+        const text = await response.text();
+        articles.push({ content: text, html: marked(text) });
+    }
+}
+
+// Função para detectar idioma
+function detectLanguage(text) {
+    const isEnglish = /^[a-zA-Z0-9\s.,?!]+$/.test(text);
+    return isEnglish ? 'en' : 'pt';
+}
+
+// Função para buscar informações da internet usando a Wikipedia API
 async function fetchFromInternet(query, language) {
     const apiUrl = `https://${language}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
     
@@ -46,7 +70,7 @@ async function fetchFromInternet(query, language) {
     }
 }
 
-// Função para processar uma pergunta (atualizada)
+// Função para processar uma pergunta
 async function processQuestion(question) {
     const language = detectLanguage(question);
     const keywords = extractKeywords(question, language);
@@ -62,6 +86,84 @@ async function processQuestion(question) {
         return internetResponse;
     }
 }
+
+// Função para extrair palavras-chave simples (removendo palavras comuns)
+function extractKeywords(question, language) {
+    const stopWords = language === 'pt' ? ["e", "de", "que", "a", "o", "na", "em", "com", "como"] : ["and", "the", "that", "a", "in", "of", "with"];
+    return question
+        .toLowerCase()
+        .split(" ")
+        .filter(word => !stopWords.includes(word))
+        .map(word => word.trim())
+        .join(" ");
+}
+
+// Função para encontrar o artigo mais relevante
+function findBestMatch(keywords) {
+    let matchedArticles = [];
+
+    // Para cada artigo, procuramos por palavras-chave
+    articles.forEach(article => {
+        const articleContent = article.content.toLowerCase();
+        const keywordArray = keywords.split(" ");
+
+        // Verifica se o conteúdo do artigo contém qualquer palavra-chave
+        const matches = keywordArray.filter(keyword => articleContent.includes(keyword));
+
+        if (matches.length > 0) {
+            matchedArticles.push({
+                content: article.content,
+                matchCount: matches.length
+            });
+        }
+    });
+
+    // Ordena os artigos pela quantidade de palavras-chave que coincidem
+    matchedArticles.sort((a, b) => b.matchCount - a.matchCount);
+
+    if (matchedArticles.length > 0) {
+        return summarizeContent(matchedArticles[0].content, detectLanguage(keywords));
+    } else {
+        return null;
+    }
+}
+
+// Função para resumir conteúdo
+function summarizeContent(content, language) {
+    const lines = content.split('\n').filter(line => line.trim().length > 0);
+    return language === 'pt' 
+        ? lines.slice(0, 3).join(' ') 
+        : lines.slice(0, 3).join(' ');
+}
+
+// Função para enviar mensagem
+async function sendMessage() {
+    const userInput = document.getElementById("userInput").value;
+    const messages = document.getElementById("messages");
+
+    // Adicionar mensagem do usuário
+    const userMessage = document.createElement("div");
+    userMessage.className = "message user";
+    userMessage.textContent = userInput;
+    messages.appendChild(userMessage);
+
+    // Processar resposta
+    const botResponse = await processQuestion(userInput);
+    const botMessage = document.createElement("div");
+    botMessage.className = "message bot";
+    botMessage.textContent = botResponse;
+    messages.appendChild(botMessage);
+
+    // Limpar input
+    document.getElementById("userInput").value = "";
+
+    // Scroll até o final
+    messages.scrollTop = messages.scrollHeight;
+}
+
+// Carregar artigos ao iniciar
+loadArticles();
+        
     </script>
 </body>
 </html>
